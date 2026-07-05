@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电荔 Elipow - 登录与初始化</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#0a0a0a',
+                        foreground: '#fafafa',
+                        primary: '#aa3bff',
+                        accent: '#3b82f6',
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { background-color: #0a0a0a; color: #fafafa; font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+        .glow-text { text-shadow: 0 0 12px rgba(170, 59, 255, 0.6); }
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="min-h-screen w-full relative flex items-center justify-center bg-grid bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 via-background to-background">
+    
+    <div class="absolute top-8 left-8 flex items-center gap-3">
+        <i data-lucide="zap" class="text-primary w-8 h-8"></i>
+        <span class="font-bold tracking-widest text-xl glow-text">ELIPOW</span>
+    </div>
+
+    <!-- Login Container -->
+    <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center p-6 z-10" id="step-login">
+        
+        <!-- Left: Branding -->
+        <div class="hidden md:flex flex-col gap-6 pr-8 border-r border-white/10">
+            <h1 class="text-4xl font-bold leading-tight">
+                重塑你的<br/>
+                <span class="text-primary glow-text">电力学习</span>图谱
+            </h1>
+            <p class="text-white/50 text-sm leading-relaxed">
+                基于 BKT 贝叶斯知识追踪与图神经网络。<br/>精准定位知识盲区，生成专属于你的最优学习路径。
+            </p>
+            <div class="flex gap-4 mt-4">
+                <div class="px-3 py-1 rounded-full border border-primary/30 text-primary text-xs bg-primary/10">Neo4j 图谱引擎</div>
+                <div class="px-3 py-1 rounded-full border border-accent/30 text-accent text-xs bg-accent/10">知识溯源 RAG</div>
+            </div>
+        </div>
+
+        <!-- Right: Login Form -->
+        <div class="glass-panel p-8 rounded-2xl w-full max-w-md mx-auto">
+            <h2 class="text-xl font-semibold mb-6">快捷登录</h2>
+            
+            <!-- QR Mock -->
+            <div class="w-full h-48 border border-white/10 rounded-xl bg-black/40 flex flex-col items-center justify-center mb-6 cursor-pointer hover:bg-black/60 transition-colors" onclick="nextStep()">
+                <i data-lucide="qr-code" class="w-16 h-16 text-white/20 mb-2"></i>
+                <span class="text-xs text-white/40">点击模拟微信扫码成功</span>
+            </div>
+
+            <div class="flex items-center gap-4 mb-6">
+                <div class="flex-1 h-px bg-white/10"></div>
+                <span class="text-xs text-white/30">或使用账号密码</span>
+                <div class="flex-1 h-px bg-white/10"></div>
+            </div>
+
+            <input type="text" placeholder="邮箱/学号" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 mb-4 text-sm text-white focus:outline-none focus:border-primary/50 transition-colors">
+            <input type="password" placeholder="密码" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 mb-6 text-sm text-white focus:outline-none focus:border-primary/50 transition-colors">
+            
+            <button class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 rounded-lg transition-colors shadow-[0_0_20px_rgba(170,59,255,0.3)]">
+                进入系统
+            </button>
+        </div>
+    </div>
+
+    <!-- Onboarding Container (Hidden by default) -->
+    <div class="w-full max-w-2xl glass-panel p-10 rounded-2xl hidden z-10" id="step-onboarding">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-2xl font-bold">构建初始画像</h2>
+            <div class="text-sm font-mono text-primary">1 / 3</div>
+        </div>
+        
+        <p class="text-white/50 text-sm mb-8">为了让底层知识图谱能精准计算您的学习权重，我们需要了解您当前的目标。</p>
+
+        <div class="flex flex-col gap-4">
+            <label class="text-sm font-medium text-white/80">您的未来规划是？</label>
+            <div class="grid grid-cols-3 gap-4">
+                <div class="border border-primary/50 bg-primary/10 rounded-xl p-4 flex flex-col items-center gap-2 cursor-pointer">
+                    <i data-lucide="graduation-cap" class="text-primary w-6 h-6"></i>
+                    <span class="text-sm">考研深造</span>
+                </div>
+                <div class="border border-white/10 bg-white/5 hover:bg-white/10 rounded-xl p-4 flex flex-col items-center gap-2 cursor-pointer transition-colors">
+                    <i data-lucide="briefcase" class="text-white/50 w-6 h-6"></i>
+                    <span class="text-sm text-white/70">国网/央企</span>
+                </div>
+                <div class="border border-white/10 bg-white/5 hover:bg-white/10 rounded-xl p-4 flex flex-col items-center gap-2 cursor-pointer transition-colors">
+                    <i data-lucide="building-2" class="text-white/50 w-6 h-6"></i>
+                    <span class="text-sm text-white/70">私企就业</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-4 mt-8">
+            <label class="text-sm font-medium text-white/80">当前最薄弱的知识点 (必填)</label>
+            <div class="relative">
+                <i data-lucide="search" class="absolute left-3 top-3 text-white/30 w-4 h-4"></i>
+                <input type="text" placeholder="例如：变压器等效电路、交流绕组..." class="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-primary/50 transition-colors">
+            </div>
+        </div>
+
+        <div class="flex justify-end mt-10">
+            <button class="bg-white text-black hover:bg-white/90 font-medium px-8 py-2.5 rounded-lg transition-colors flex items-center gap-2" onclick="finishSetup()">
+                生成专属图谱 <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        function nextStep() {
+            document.getElementById('step-login').classList.add('hidden');
+            document.getElementById('step-onboarding').classList.remove('hidden');
+        }
+        function finishSetup() {
+            window.location.href = 'prototype.html';
+        }
+    </script>
+</body>
+</html>

@@ -28,5 +28,9 @@
 - Prefer structured outputs for AI responses (e.g., current level, gaps, next steps, sources).
 - Keep answers traceable to resources; avoid unsupported free-form generation. AI responses MUST NOT give direct answers, but instead use Socratic questioning to guide the user.
 
+## Frontend Design Skill
+- For all frontend design, implementation, review, or refactor work, load and follow the local skill: [.agents/skills/linear-frontend-design/SKILL.md](.agents/skills/linear-frontend-design/SKILL.md).
+- This Linear-inspired product style overrides earlier generic glassmorphism/neon direction when there is a conflict: prefer calm dark surfaces, compact density, precise hierarchy, subtle motion, source traceability, and workflow-first screens.
+
 ## Build/Test
 - No build or test commands found in this workspace. If code is added later, document commands here.

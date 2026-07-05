@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电荔 Elipow - 交互原型</title>
+    
+    <!-- 引入 Tailwind CSS CDN 以快速构建原型 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#0a0a0a',
+                        foreground: '#fafafa',
+                        primary: '#aa3bff',
+                        accent: '#3b82f6',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- 引入 Lucide 图标库 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        
+        body { 
+            background-color: #0a0a0a; 
+            color: #fafafa; 
+            font-family: 'Inter', sans-serif; 
+            overflow: hidden; 
+        }
+        
+        /* 毛玻璃面板基类 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+        
+        .glow-text { 
+            text-shadow: 0 0 12px rgba(170, 59, 255, 0.6); 
+        }
+        
+        /* 图谱节点样式 */
+        .node { 
+            position: absolute; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            cursor: pointer; 
+        }
+        
+        .node:hover { 
+            transform: scale(1.05) translateY(-2px); 
+            z-index: 10;
+        }
+        
+        /* 背景连接线 */
+        svg.bg-lines { 
+            width: 100%; 
+            height: 100%; 
+            position: absolute; 
+            top: 0; left: 0; 
+            z-index: 0; 
+            pointer-events: none; 
+        }
+
+        /* 隐藏滚动条 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="flex h-screen w-full relative">
+
+    <!-- 极简左侧导航栏 (App Shell) -->
+    <aside class="w-20 md:w-56 border-r border-white/10 flex flex-col bg-background/50 z-20 transition-all">
+        <div class="h-16 flex items-center justify-center md:justify-start md:px-6 border-b border-white/10">
+            <i data-lucide="zap" class="text-primary w-6 h-6"></i>
+            <span class="hidden md:block ml-3 font-semibold tracking-widest text-sm">ELIPOW</span>
+        </div>
+        <nav class="flex-1 py-6 flex flex-col gap-3 px-3">
+            <div class="w-full flex items-center justify-center md:justify-start px-0 md:px-3 py-3 rounded-lg bg-white/10 text-white cursor-pointer shadow-sm">
+                <i data-lucide="compass" class="w-5 h-5"></i>
+                <span class="hidden md:block ml-3 text-sm font-medium">知识星图</span>
+            </div>
+            <div class="w-full flex items-center justify-center md:justify-start px-0 md:px-3 py-3 rounded-lg text-white/40 hover:bg-white/5 hover:text-white/80 cursor-pointer transition-colors">
+                <i data-lucide="book" class="w-5 h-5"></i>
+                <span class="hidden md:block ml-3 text-sm font-medium">错题库</span>
+            </div>
+            <div class="w-full flex items-center justify-center md:justify-start px-0 md:px-3 py-3 rounded-lg text-white/40 hover:bg-white/5 hover:text-white/80 cursor-pointer transition-colors">
+                <i data-lucide="user" class="w-5 h-5"></i>
+                <span class="hidden md:block ml-3 text-sm font-medium">能力档案</span>
+            </div>
+        </nav>
+        <div class="p-4 border-t border-white/10 text-white/40">
+             <div class="w-full flex items-center justify-center md:justify-start px-0 md:px-3 py-3 rounded-lg cursor-pointer hover:bg-white/5 hover:text-white/80 transition-colors">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+                <span class="hidden md:block ml-3 text-sm font-medium">全局设置</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 核心工作区 -->
+    <main class="flex-1 relative overflow-hidden bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-background to-background">
+        
+        <!-- 顶部悬浮状态栏 -->
+        <header class="absolute top-6 left-8 z-20 pointer-events-none">
+            <div class="glass-panel px-5 py-2.5 rounded-full flex items-center gap-4 text-sm pointer-events-auto">
+                <span class="text-white/70 font-medium tracking-wide">《电机学》学习拓扑</span>
+                <div class="w-px h-4 bg-white/20"></div>
+                <span class="text-white/50">当前 BKT 评估:</span>
+                <span class="text-primary font-mono font-semibold glow-text tracking-wide">Lvl.4 进阶</span>
+            </div>
+        </header>
+
+        <!-- 知识图谱画布 (Mock) -->
+        <div class="absolute inset-0 z-10" id="canvas">
+            
+            <!-- 连线 SVG -->
+            <svg class="bg-lines">
+                <defs>
+                    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="rgba(170, 59, 255, 0.8)" />
+                        <stop offset="100%" stop-color="rgba(59, 130, 246, 0.2)" />
+                    </linearGradient>
+                </defs>
+                
+                <!-- 已掌握 -> 学习中 -->
+                <path d="M 280 220 Q 380 250 250 400" stroke="url(#glow)" stroke-width="2.5" fill="none" stroke-dasharray="6" stroke-dashoffset="0">
+                    <animate attributeName="stroke-dashoffset" values="24;0" dur="1s" repeatCount="indefinite" />
+                </path>
+                
+                <!-- 已掌握 -> 未解锁 -->
+                <path d="M 280 220 Q 450 180 560 300" stroke="rgba(255, 255, 255, 0.08)" stroke-width="2" fill="none" />
+                
+                <!-- 学习中 -> 未解锁 -->
+                <path d="M 250 400 Q 400 450 560 300" stroke="rgba(255, 255, 255, 0.08)" stroke-width="2" fill="none" />
+            </svg>
+
+            <!-- 节点 1：已掌握 -->
+            <div class="node glass-panel px-4 py-3.5 rounded-xl flex items-center gap-3.5 w-64 border-primary/40" style="top: 180px; left: 160px;">
+                <div class="w-9 h-9 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(170,59,255,0.4)]">
+                    <i data-lucide="sparkles" class="w-4.5 h-4.5"></i>
+                </div>
+                <div class="flex flex-col flex-1 gap-1">
+                    <span class="text-[14px] font-semibold text-white tracking-wide">电路基本定律</span>
+                    <span class="text-[10px] text-white/50 uppercase tracking-widest">已掌握 · 95%</span>
+                </div>
+            </div>
+
+            <!-- 节点 2：正在学习 -->
+            <div class="node glass-panel px-4 py-3.5 rounded-xl flex items-center gap-3.5 w-64 border-accent/50 shadow-[0_0_20px_rgba(59,130,246,0.25)]" style="top: 380px; left: 100px;">
+                <div class="w-9 h-9 rounded-full bg-accent/20 text-accent flex items-center justify-center shrink-0">
+                    <i data-lucide="book-open" class="w-4.5 h-4.5"></i>
+                </div>
+                <div class="flex flex-col flex-1 gap-1">
+                    <span class="text-[14px] font-semibold text-white tracking-wide">磁路基础与感应</span>
+                    <span class="text-[10px] text-accent/80 uppercase tracking-widest">正在学习 · 68%</span>
+                </div>
+            </div>
+
+            <!-- 节点 3：未解锁 -->
+            <div class="node glass-panel px-4 py-3.5 rounded-xl flex items-center gap-3.5 w-64 border-white/5 opacity-60" style="top: 280px; left: 520px;">
+                <div class="w-9 h-9 rounded-full bg-white/5 text-white/30 flex items-center justify-center shrink-0">
+                    <i data-lucide="lock" class="w-4.5 h-4.5"></i>
+                </div>
+                <div class="flex flex-col flex-1 gap-1">
+                    <span class="text-[14px] font-medium text-white/50 tracking-wide">变压器原理</span>
+                    <span class="text-[10px] text-white/30 uppercase tracking-widest">前置未解锁</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 苏格拉底画中画悬浮舱 (Socratic Chat PiP) -->
+        <div class="absolute z-50 w-[420px] glass-panel rounded-2xl flex flex-col overflow-hidden shadow-2xl transition-all duration-200" 
+             id="chat-panel" 
+             style="bottom: 30px; right: 30px; border: 1px solid rgba(255,255,255,0.15);">
+            
+            <!-- 拖拽 Header -->
+            <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-white/[0.02] cursor-grab active:cursor-grabbing" id="chat-header">
+                <div class="flex items-center gap-2.5">
+                    <i data-lucide="sparkles" class="text-primary w-4 h-4"></i>
+                    <span class="text-[13px] font-medium text-white/90 tracking-wide">苏格拉底导师</span>
+                </div>
+                <div class="flex items-center gap-3 text-white/40">
+                    <i data-lucide="minimize-2" class="w-3.5 h-3.5 hover:text-white cursor-pointer transition-colors" title="最小化"></i>
+                    <i data-lucide="x" class="w-3.5 h-3.5 hover:text-white cursor-pointer transition-colors" title="关闭"></i>
+                </div>
+            </div>
+            
+            <!-- 对话流 -->
+            <div class="flex-1 p-5 flex flex-col gap-5 overflow-y-auto no-scrollbar" style="height: 380px;">
+                
+                <!-- AI 引导 -->
+                <div class="flex gap-3">
+                    <div class="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-1 shadow-inner">
+                        <i data-lucide="bot" class="text-primary w-3.5 h-3.5"></i>
+                    </div>
+                    <div class="text-[13px] leading-relaxed text-white/85 bg-white/5 p-3.5 rounded-2xl rounded-tl-sm border border-white/5 shadow-sm">
+                        在我们进入变压器的等效电路之前，你还记得在磁路中，当铁芯饱和时，励磁电流的波形会发生什么变化吗？<sup class="text-primary cursor-pointer hover:underline font-bold ml-0.5" title="点击查看来源: 《电机学》第3章 3.2节">[1]</sup>
+                    </div>
+                </div>
+
+                <!-- 学生回答 -->
+                <div class="flex gap-3 flex-row-reverse">
+                    <div class="text-[13px] leading-relaxed text-white bg-accent/20 p-3.5 rounded-2xl rounded-tr-sm border border-accent/20 shadow-sm">
+                        会变成尖顶波？因为磁导率下降了？
+                    </div>
+                </div>
+
+                <!-- AI 追问 -->
+                <div class="flex gap-3">
+                    <div class="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-1 shadow-inner">
+                        <i data-lucide="bot" class="text-primary w-3.5 h-3.5"></i>
+                    </div>
+                    <div class="text-[13px] leading-relaxed text-white/85 bg-white/5 p-3.5 rounded-2xl rounded-tl-sm border border-white/5 shadow-sm">
+                        回答得很棒。既然你提到了磁导率下降，那么在这种情况下，如果强行用线性电路的思维去画等效模型，你觉得会忽略掉什么关键损耗？
+                    </div>
+                </div>
+                
+            </div>
+
+            <!-- 底部输入框 -->
+            <div class="p-3.5 border-t border-white/10 bg-black/40">
+                <div class="relative flex items-center">
+                    <input type="text" placeholder="继续推演逻辑..." class="w-full bg-white/5 border border-white/10 rounded-full px-5 py-2.5 text-[13px] text-white placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors shadow-inner">
+                    <button class="absolute right-1.5 p-2 bg-primary rounded-full text-white hover:bg-primary/80 transition-transform hover:scale-105 active:scale-95 shadow-md">
+                        <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 交互脚本 -->
+    <script>
+        // 初始化 Lucide 图标
+        lucide.createIcons();
+        
+        // 简易拖拽逻辑 (作用于悬浮舱)
+        const chatPanel = document.getElementById('chat-panel');
+        const chatHeader = document.getElementById('chat-header');
+        
+        let isDragging = false;
+        let startX, startY, initialLeft, initialTop;
+
+        chatHeader.addEventListener('mousedown', (e) => {
+            if (e.target.tagName.toLowerCase() === 'i') return; // 点击图标时不拖拽
+            isDragging = true;
+            
+            const rect = chatPanel.getBoundingClientRect();
+            // 将 bottom/right 定位转换为 left/top 以便自由拖动
+            chatPanel.style.left = rect.left + 'px';
+            chatPanel.style.top = rect.top + 'px';
+            chatPanel.style.bottom = 'auto';
+            chatPanel.style.right = 'auto';
+            
+            initialLeft = rect.left;
+            initialTop = rect.top;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            chatHeader.style.cursor = 'grabbing';
+            chatPanel.style.opacity = '0.9';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            
+            chatPanel.style.left = `${initialLeft + dx}px`;
+            chatPanel.style.top = `${initialTop + dy}px`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                chatHeader.style.cursor = 'grab';
+                chatPanel.style.opacity = '1';
+            }
+        });
+    </script>
+</body>
+</html>

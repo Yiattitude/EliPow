@@ -1,7 +1,3 @@
-import { Routes, Route } from 'react-router-dom'
-import Layout from './components/Layout'
-import Home from './pages/Home'
-import Login from './pages/Login'
 import { LearningPathMap } from './components/LearningPathMap';
 import { SocraticChatPanel } from './components/SocraticChatPanel';
 import { Compass, Book, User, Settings, Zap } from 'lucide-react';

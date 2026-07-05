@@ -5,14 +5,11 @@ import {
   Background,
   applyNodeChanges,
   applyEdgeChanges,
-  NodeChange,
-  EdgeChange,
-  Node,
-  Edge,
   Handle,
   Position,
   BackgroundVariant
 } from '@xyflow/react';
+import type { NodeChange, EdgeChange, Node, Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Sparkles, BookOpen, Lock } from 'lucide-react';
 

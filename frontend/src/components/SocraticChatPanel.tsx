@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, useDragControls } from 'motion/react';
 import { Sparkles, X, Minimize2, Send, Bot } from 'lucide-react';
 
@@ -6,7 +6,6 @@ export function SocraticChatPanel() {
   const [isMinimized, setIsMinimized] = useState(false);
   const [input, setInput] = useState('');
   const dragControls = useDragControls();
-  const constraintsRef = useRef(null);
 
   // Auto-scroll logic could go here
   
