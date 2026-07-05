@@ -1,0 +1,87 @@
+认证接口约定
+=============
+
+1. 注册
+--------
+
+URL: POST /api/auth/register
+Content-Type: application/json
+
+请求体:
+  email      string  必填  邮箱
+  password   string  必填  密码 (6~32位)
+  nickname   string  选填  昵称
+
+示例请求:
+{
+  "email": "user@example.com",
+  "password": "123456",
+  "nickname": "小明"
+}
+
+示例响应:
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "id": 1,
+    "email": "user@example.com",
+    "nickname": "小明",
+    "role": "STUDENT",
+    "token": "eyJhbGciOiJIUzI1NiJ9..."
+  }
+}
+
+响应字段:
+  code         int    0成功，非0异常
+  message      string 提示信息
+  data.id      long   用户ID
+  data.email   string 邮箱
+  data.nickname string 昵称
+  data.role    string 角色 STUDENT|ADMIN
+  data.token   string JWT Token
+
+
+2. 登录
+--------
+
+URL: POST /api/auth/login
+Content-Type: application/json
+
+请求体:
+  email      string  必填  邮箱
+  password   string  必填  密码
+
+示例请求:
+{
+  "email": "user@example.com",
+  "password": "123456"
+}
+
+响应: 同注册响应
+
+
+3. 统一返回结构
+----------------
+
+全部接口使用:
+{
+  "code": 0,
+  "message": "ok",
+  "data": {}
+}
+
+错误码:
+  0    成功
+  4001 参数校验失败
+  4010 未认证
+  4030 无权限
+  4040 资源不存在
+  5000 服务异常
+
+
+4. 认证方式
+------------
+
+后续请求在 Header 中携带:
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
