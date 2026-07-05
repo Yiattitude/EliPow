@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   --text: #6b6375;
   --text-h: #08060d;
@@ -10,21 +12,17 @@
   --social-bg: rgba(244, 243, 236, 0.5);
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+}
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  @tailwind base;
-  @tailwind components;
-  @tailwind utilities;
+* {
+  box-sizing: border-box;
+}
 
-  * {
-    box-sizing: border-box;
-  }
-
-  body {
-    margin: 0;
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background-color: #f8fafc;
-  }
+body {
+  margin: 0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background-color: #f8fafc;
+}
 
 #spacer {
   height: 88px;
