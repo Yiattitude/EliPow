@@ -1,0 +1,77 @@
+package com.elipow.backend.controller;
+
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import javax.sql.DataSource;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+@RestController
+public class DbTestController {
+
+    private final DataSource dataSource;
+
+    public DbTestController(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    @GetMapping("/api/db-test")
+    public Map<String, Object> test() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try (var conn = dataSource.getConnection()) {
+            result.put("connected", true);
+            result.put("catalog", conn.getCatalog());
+
+            // 测试查询 user 表
+            try (var stmt = conn.createStatement();
+                 var rs = stmt.executeQuery("SELECT COUNT(*) FROM `user`")) {
+                rs.next();
+                result.put("userCount", rs.getInt(1));
+            }
+
+            // 测试查询 knowledge_point 表
+            try (var stmt = conn.createStatement();
+                 var rs = stmt.executeQuery("SELECT COUNT(*) FROM `knowledge_point`")) {
+                rs.next();
+                result.put("knowledgePointCount", rs.getInt(1));
+            }
+
+            result.put("status", "ok");
+        } catch (Exception e) {
+            result.put("status", "error");
+            result.put("error", e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+        return result;
+    }
+
+    @DeleteMapping("/api/admin/reset-users")
+    public Map<String, Object> resetUsers() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try (var conn = dataSource.getConnection()) {
+            conn.setAutoCommit(false);
+            var stmt = conn.createStatement();
+
+            // 按外键依赖顺序删除
+            stmt.executeUpdate("DELETE FROM `user_favorite`");
+            stmt.executeUpdate("DELETE FROM `user_action_log`");
+            stmt.executeUpdate("DELETE FROM `learning_progress`");
+            stmt.executeUpdate("DELETE FROM `qa_record`");
+            stmt.executeUpdate("DELETE FROM `assessment`");
+            stmt.executeUpdate("DELETE FROM `learning_path_recommendation`");
+            stmt.executeUpdate("DELETE FROM `learning_path`");
+            stmt.executeUpdate("DELETE FROM `user_profile`");
+            int deleted = stmt.executeUpdate("DELETE FROM `user`");
+
+            conn.commit();
+            result.put("status", "ok");
+            result.put("deletedUsers", deleted);
+            result.put("message", "已清空所有用户数据，保留知识库和资源");
+        } catch (Exception e) {
+            result.put("status", "error");
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+}
