@@ -6,6 +6,7 @@ public class AuthResponse {
     private String nickname;
     private String role;
     private String token;
+    private boolean hasProfile;
 
     public Long getId() {
         return id;
@@ -46,4 +47,7 @@ public class AuthResponse {
     public void setToken(String token) {
         this.token = token;
     }
+
+    public boolean isHasProfile() { return hasProfile; }
+    public void setHasProfile(boolean hasProfile) { this.hasProfile = hasProfile; }
 }

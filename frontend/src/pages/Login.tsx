@@ -5,10 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate, Link } from 'react-router-dom'
 import { login } from '../api'
 import { useAuth } from '../store/auth'
+import { Zap } from 'lucide-react'
 
 const schema = z.object({
-  email: z.string().email('请输入正确邮箱'),
-  password: z.string().min(6, '至少 6 位密码')
+  email: z.string().email('请输入正确的邮箱地址'),
+  password: z.string().min(6, '密码至少 6 位'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -29,55 +30,72 @@ export default function Login() {
     try {
       const res = await login(data.email, data.password)
       const d = res.data.data
-      setAuth(d.token, d.email, d.nickname)
-      navigate('/')
+      setAuth(d.token, d.id, d.email, d.nickname, d.hasProfile)
+      navigate(d.hasProfile ? '/dashboard' : '/onboarding')
     } catch {
-      setApiError('邮箱或密码错误')
+      setApiError('邮箱或密码错误，请重试')
     }
   }
 
   return (
-    <div className="mx-auto max-w-md rounded-2xl border bg-white p-8 shadow-sm">
-      <h2 className="text-xl font-semibold">登录</h2>
-      <p className="mt-2 text-sm text-slate-600">使用学校邮箱进入学习路径。</p>
-      <form className="mt-6 space-y-4" onSubmit={handleSubmit(onSubmit)}>
-        {apiError && (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{apiError}</p>
-        )}
-        <div>
-          <label className="text-sm font-medium">邮箱</label>
-          <input
-            className="mt-2 w-full rounded-lg border px-3 py-2 text-sm"
-            placeholder="name@school.edu"
-            {...register('email')}
-          />
-          {errors.email && (
-            <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
-          )}
+    <div className="flex min-h-[calc(100vh-14rem)] items-center justify-center">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary mb-4">
+            <Zap size={20} className="text-primary-foreground" />
+          </div>
+          <h1 className="text-xl font-semibold tracking-tight">欢迎回来</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">登录你的学习账号</p>
         </div>
-        <div>
-          <label className="text-sm font-medium">密码</label>
-          <input
-            className="mt-2 w-full rounded-lg border px-3 py-2 text-sm"
-            type="password"
-            placeholder="请输入密码"
-            {...register('password')}
-          />
-          {errors.password && (
-            <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
-          )}
+
+        {/* 卡片 */}
+        <div className="rounded-xl border border-border bg-card p-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {apiError && (
+              <div className="rounded-md bg-red-950/40 border border-red-800/50 px-3 py-2 text-xs text-red-400">
+                {apiError}
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">邮箱</label>
+              <input
+                className="w-full h-9 rounded-md border border-border bg-secondary px-3 text-sm text-foreground placeholder:text-muted-foreground/50
+                  focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                placeholder="name@school.edu"
+                {...register('email')}
+              />
+              {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">密码</label>
+              <input
+                type="password"
+                className="w-full h-9 rounded-md border border-border bg-secondary px-3 text-sm text-foreground placeholder:text-muted-foreground/50
+                  focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                placeholder="输入密码"
+                {...register('password')}
+              />
+              {errors.password && <p className="text-xs text-red-400">{errors.password.message}</p>}
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium
+                hover:opacity-90 disabled:opacity-50 transition-opacity"
+            >
+              {isSubmitting ? '登录中...' : '登录'}
+            </button>
+          </form>
         </div>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-60"
-        >
-          {isSubmitting ? '登录中...' : '登录'}
-        </button>
-        <p className="text-center text-xs text-slate-500">
-          还没有账号？<Link to="/register" className="text-slate-900 underline">注册</Link>
+
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          还没有账号？<Link to="/register" className="text-primary hover:underline">立即注册</Link>
         </p>
-      </form>
+      </div>
     </div>
   )
 }

@@ -5,11 +5,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate, Link } from 'react-router-dom'
 import { register as registerApi } from '../api'
 import { useAuth } from '../store/auth'
+import { Zap } from 'lucide-react'
 
 const schema = z.object({
-  email: z.string().email('请输入正确邮箱'),
-  password: z.string().min(6, '至少 6 位密码'),
-  nickname: z.string().optional()
+  email: z.string().email('请输入正确的邮箱地址'),
+  password: z.string().min(6, '密码至少 6 位'),
+  nickname: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -30,63 +31,80 @@ export default function Register() {
     try {
       const res = await registerApi(data.email, data.password, data.nickname)
       const d = res.data.data
-      setAuth(d.token, d.email, d.nickname)
-      navigate('/')
+      setAuth(d.token, d.id, d.email, d.nickname, d.hasProfile)
+      navigate('/onboarding')
     } catch {
       setApiError('注册失败，邮箱可能已被使用')
     }
   }
 
   return (
-    <div className="mx-auto max-w-md rounded-2xl border bg-white p-8 shadow-sm">
-      <h2 className="text-xl font-semibold">注册</h2>
-      <p className="mt-2 text-sm text-slate-600">创建账号开始学习路径。</p>
-      <form className="mt-6 space-y-4" onSubmit={handleSubmit(onSubmit)}>
-        {apiError && (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{apiError}</p>
-        )}
-        <div>
-          <label className="text-sm font-medium">邮箱</label>
-          <input
-            className="mt-2 w-full rounded-lg border px-3 py-2 text-sm"
-            placeholder="name@school.edu"
-            {...register('email')}
-          />
-          {errors.email && (
-            <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
-          )}
+    <div className="flex min-h-[calc(100vh-14rem)] items-center justify-center">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary mb-4">
+            <Zap size={20} className="text-primary-foreground" />
+          </div>
+          <h1 className="text-xl font-semibold tracking-tight">创建账号</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">开始你的学习路径</p>
         </div>
-        <div>
-          <label className="text-sm font-medium">密码</label>
-          <input
-            className="mt-2 w-full rounded-lg border px-3 py-2 text-sm"
-            type="password"
-            placeholder="至少 6 位密码"
-            {...register('password')}
-          />
-          {errors.password && (
-            <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
-          )}
+
+        <div className="rounded-xl border border-border bg-card p-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {apiError && (
+              <div className="rounded-md bg-red-950/40 border border-red-800/50 px-3 py-2 text-xs text-red-400">
+                {apiError}
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">邮箱</label>
+              <input
+                className="w-full h-9 rounded-md border border-border bg-secondary px-3 text-sm text-foreground placeholder:text-muted-foreground/50
+                  focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                placeholder="name@school.edu"
+                {...register('email')}
+              />
+              {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">密码</label>
+              <input
+                type="password"
+                className="w-full h-9 rounded-md border border-border bg-secondary px-3 text-sm text-foreground placeholder:text-muted-foreground/50
+                  focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                placeholder="至少 6 位"
+                {...register('password')}
+              />
+              {errors.password && <p className="text-xs text-red-400">{errors.password.message}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">昵称 <span className="text-muted-foreground">（选填）</span></label>
+              <input
+                className="w-full h-9 rounded-md border border-border bg-secondary px-3 text-sm text-foreground placeholder:text-muted-foreground/50
+                  focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                placeholder="如何称呼你"
+                {...register('nickname')}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium
+                hover:opacity-90 disabled:opacity-50 transition-opacity"
+            >
+              {isSubmitting ? '注册中...' : '创建账号'}
+            </button>
+          </form>
         </div>
-        <div>
-          <label className="text-sm font-medium">昵称（选填）</label>
-          <input
-            className="mt-2 w-full rounded-lg border px-3 py-2 text-sm"
-            placeholder="如何称呼你"
-            {...register('nickname')}
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-60"
-        >
-          {isSubmitting ? '注册中...' : '注册'}
-        </button>
-        <p className="text-center text-xs text-slate-500">
-          已有账号？<Link to="/login" className="text-slate-900 underline">登录</Link>
+
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          已有账号？<Link to="/login" className="text-primary hover:underline">登录</Link>
         </p>
-      </form>
+      </div>
     </div>
   )
 }

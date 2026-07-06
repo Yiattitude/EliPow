@@ -15,11 +15,14 @@ public class AuthServiceImpl implements AuthService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final UserProfileService userProfileService;
 
-    public AuthServiceImpl(UserMapper userMapper, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+    public AuthServiceImpl(UserMapper userMapper, PasswordEncoder passwordEncoder,
+                           JwtUtil jwtUtil, UserProfileService userProfileService) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.userProfileService = userProfileService;
     }
 
     @Override
@@ -59,6 +62,7 @@ public class AuthServiceImpl implements AuthService {
         resp.setNickname(user.getNickname());
         resp.setRole(user.getRole());
         resp.setToken(token);
+        resp.setHasProfile(userProfileService.hasProfile(user.getId()));
         return resp;
     }
 }
