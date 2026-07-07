@@ -13,6 +13,15 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 动态周计划生成服务
+ *
+ * 核心逻辑：
+ * 1. 获取用户的薄弱科目（从 UserProfile 中读取）
+ * 2. 按"前置基础 → 薄弱科目 → 拓展学习"的优先级排列
+ * 3. 在时间预算内截取任务序列
+ * 4. 每个任务的预估耗时来自 knowledge_point.estimated_hours 字段
+ */
 @Service
 public class StudyPlanServiceImpl implements StudyPlanService {
 
@@ -30,47 +39,50 @@ public class StudyPlanServiceImpl implements StudyPlanService {
 
     @Override
     public List<PlanItem> generatePlan(Long userId, int timeBudget) {
-        // 1. 获取所有知识点
+        // 第一步：查询所有知识点，按 sort_order 排序
         List<KnowledgePoint> allPoints = knowledgePointMapper.selectList(
                 new QueryWrapper<KnowledgePoint>().orderByAsc("sort_order")
         );
 
-        // 2. 构建层级映射
+        // 第二步：构建知识点 ID → 对象的映射，供快速查找
         Map<Long, KnowledgePoint> pointMap = allPoints.stream()
                 .collect(Collectors.toMap(KnowledgePoint::getId, p -> p));
 
-        // 3. 取每个点的预估耗时（从数据库 estimated_hours 字段读，转成分钟）
+        // 第三步：读取数据库中的 estimated_hours，换算成分钟
         Map<Long, Integer> estimatedMinutes = new HashMap<>();
         for (KnowledgePoint p : allPoints) {
             double hours = p.getEstimatedHours() != null ? p.getEstimatedHours().doubleValue() : 1.0;
             estimatedMinutes.put(p.getId(), (int) Math.round(hours * 60));
         }
 
-        // 4. 获取用户薄弱科目
+        // 第四步：获取用户在 Onboarding 时标记的薄弱科目名称
         Set<String> weakNames = getWeakKnowledgeNames(userId);
+        // 把薄弱科目名称映射为知识点 ID
         Set<Long> weakIds = allPoints.stream()
                 .filter(p -> weakNames.contains(p.getName()))
                 .map(KnowledgePoint::getId)
                 .collect(Collectors.toSet());
 
-        // 5. 构建排序后的计划
-        Set<Long> added = new HashSet<>();
+        // 第五步：按优先级排序生成计划
+        Set<Long> added = new HashSet<>();  // 记录已加入计划的知识点 ID，避免重复
         List<PlanItem> plan = new ArrayList<>();
 
-        // 5a. 先加薄弱科目的前置依赖（复习用）
+        // 5a. 优先加入薄弱科目的前置依赖知识点（复习用）
+        // 递归查找父节点，确保基础先学
         for (Long weakId : weakIds) {
             addPrerequisites(weakId, pointMap, estimatedMinutes, added, plan, "前置基础");
         }
 
-        // 5b. 再加薄弱科目本身（重点攻克）
+        // 5b. 再加入薄弱科目本身（重点攻克）
         for (Long weakId : weakIds) {
             if (added.contains(weakId)) continue;
             addPlanItem(weakId, pointMap, estimatedMinutes, added, plan, "薄弱科目");
         }
 
-        // 5c. 如果还有余量，加其他同级科目
+        // 5c. 如果时间预算还有剩余，补充其他同级课程
         if (getTotalMinutes(plan) < timeBudget) {
             for (KnowledgePoint p : allPoints) {
+                // 只追加顶级课程（parentId == null），且不超过时间预算
                 if (p.getParentId() == null && !added.contains(p.getId())
                         && getTotalMinutes(plan) + estimatedMinutes.getOrDefault(p.getId(), 60) <= timeBudget) {
                     addPlanItem(p.getId(), pointMap, estimatedMinutes, added, plan, "拓展学习");
@@ -83,12 +95,16 @@ public class StudyPlanServiceImpl implements StudyPlanService {
 
     @Override
     public List<PlanItem> getCurrentPlan(Long userId) {
-        // 从 user_profile 的 weekly_plan 读取（简化版：每次都重新算）
-        return generatePlan(userId, 600); // 默认 10h
+        // 简化版：每次重新计算。后续可改为从数据库读取已持久化的周计划
+        return generatePlan(userId, 600); // 默认每周 10 小时
     }
 
-    // ===== 私有方法 =====
+    // ===== 私有工具方法 =====
 
+    /**
+     * 递归添加某知识点的所有前置依赖（父节点）
+     * 保证"先复习基础，再攻克薄弱"的学习顺序
+     */
     private void addPrerequisites(Long pointId, Map<Long, KnowledgePoint> pointMap,
                                    Map<Long, Integer> estimated, Set<Long> added,
                                    List<PlanItem> plan, String reason) {
@@ -101,6 +117,9 @@ public class StudyPlanServiceImpl implements StudyPlanService {
         }
     }
 
+    /**
+     * 将一个知识点包装为 PlanItem 并加入计划列表
+     */
     private void addPlanItem(Long pointId, Map<Long, KnowledgePoint> pointMap,
                               Map<Long, Integer> estimated, Set<Long> added,
                               List<PlanItem> plan, String reason) {
@@ -119,10 +138,17 @@ public class StudyPlanServiceImpl implements StudyPlanService {
         plan.add(item);
     }
 
+    /**
+     * 计算计划总耗时（分钟）
+     */
     private int getTotalMinutes(List<PlanItem> plan) {
         return plan.stream().mapToInt(PlanItem::getEstimatedMinutes).sum();
     }
 
+    /**
+     * 从用户画像中解析薄弱科目名称列表
+     * weak_knowledge 字段为 JSON 数组格式：["电机学", "继电保护"]
+     */
     private Set<String> getWeakKnowledgeNames(Long userId) {
         QueryWrapper<UserProfile> qw = new QueryWrapper<>();
         qw.eq("user_id", userId);

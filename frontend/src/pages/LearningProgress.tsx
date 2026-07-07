@@ -4,17 +4,22 @@ import { getKnowledgePoints, getCurrentPlan, getUser } from '../api'
 import type { KnowledgePoint, PlanItem } from '../api'
 import { Play, CheckCircle2, CalendarRange, CircleDashed, Clock } from 'lucide-react'
 
+// ===== 四列看板定义 =====
+// planned: 本周学习计划中的任务
+// in_progress: 用户标记为薄弱、正在攻克的知识点
+// completed: 已完成的知识点（待后续接入 learning_progress 表）
+// not_started: 其他未涉及的知识点
 type ProgressStatus = 'not_started' | 'in_progress' | 'completed' | 'planned'
 
 interface ColumnDef {
   key: ProgressStatus
   title: string
   icon: typeof Play
-  border: string
-  bg: string
-  text: string
-  dot: string
-  empty: string
+  border: string  // 列边框颜色
+  bg: string      // 列头背景色
+  text: string    // 文字颜色
+  dot: string     // 圆点颜色
+  empty: string   // 空状态提示语
 }
 
 const COLUMNS: ColumnDef[] = [
@@ -34,22 +39,25 @@ const COLUMNS: ColumnDef[] = [
 
 export default function LearningProgress() {
   const { userId } = useAuth()
-  const [allPoints, setAllPoints] = useState<KnowledgePoint[]>([])
-  const [planItems, setPlanItems] = useState<PlanItem[]>([])
-  const [weakNames, setWeakNames] = useState<string[]>([])
+  const [allPoints, setAllPoints] = useState<KnowledgePoint[]>([])  // 所有一级知识点
+  const [planItems, setPlanItems] = useState<PlanItem[]>([])        // 本周学习计划
+  const [weakNames, setWeakNames] = useState<string[]>([])          // 用户标记的薄弱科目
   const [loading, setLoading] = useState(true)
 
+  // 进入页面时加载数据：知识点列表 + 周计划 + 用户画像
   useEffect(() => {
     if (!userId) return
     Promise.all([
-      getKnowledgePoints(),
-      getCurrentPlan(userId).catch(() => ({ data: { data: { items: [] } } })),
-      getUser(userId).catch(() => null),
+      getKnowledgePoints(),                          // 获取所有知识点
+      getCurrentPlan(userId).catch(() => ({ data: { data: { items: [] } } })),  // 获取本周计划
+      getUser(userId).catch(() => null),              // 获取用户画像（含薄弱科目）
     ]).then(([kpRes, planRes, userRes]) => {
+      // 只取一级知识点（parentId === null 的顶级课程）
       const topLevel = kpRes.data.data.filter(k => k.parentId === null)
       setAllPoints(topLevel)
       setPlanItems(planRes.data.data.items || [])
 
+      // 解析用户画像中的薄弱科目（JSON 字符串 → 数组）
       if (userRes) {
         try {
           const w = userRes.data.data.profile?.weakKnowledge
@@ -68,30 +76,26 @@ export default function LearningProgress() {
     )
   }
 
-  // 计划中 ID
-  const plannedIds = new Set(planItems.map(p => p.knowledgePointId))
+  // ===== 知识点归类逻辑 =====
+  // 1. 计划中 → 本周学习计划里的知识点
+  // 2. 进行中 → 用户标记为薄弱且未在计划中的知识点
+  // 3. 已完成 → 暂无（后续接入 learning_progress 表）
+  // 4. 未开始 → 既不在计划也不是薄弱的知识点
 
-  // 薄弱科目 ID
+  // 获取本周计划中的知识点 ID
+  const plannedIds = new Set(planItems.map(p => p.knowledgePointId))
+  // 获取用户薄弱科目的知识点 ID
   const weakIds = new Set(
     allPoints.filter(k => weakNames.includes(k.name)).map(k => k.id)
   )
 
-  // 归类
+  // 按状态归类
   const categorized: Record<ProgressStatus, KnowledgePoint[]> = {
     planned:     allPoints.filter(k => plannedIds.has(k.id)),
-    in_progress: allPoints.filter(k => !plannedIds.has(k.id) && weakIds.has(k.id) &&
-                    allPoints.find(p => weakIds.has(p.id)) !== undefined),
-    completed:   [],
+    in_progress: allPoints.filter(k => weakIds.has(k.id) && !plannedIds.has(k.id)),
+    completed:   [],  // TODO: 从 learning_progress 表读取已完成的知识点
     not_started: allPoints.filter(k => !plannedIds.has(k.id) && !weakIds.has(k.id)),
   }
-
-  // 进行中：薄弱科目中未在计划里的
-  categorized.in_progress = allPoints.filter(k => weakIds.has(k.id) && !plannedIds.has(k.id))
-
-  // 未开始：既不在计划也不在薄弱
-  categorized.not_started = allPoints.filter(k =>
-    !plannedIds.has(k.id) && !weakIds.has(k.id)
-  )
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -100,7 +104,7 @@ export default function LearningProgress() {
         <p className="text-sm text-muted-foreground mt-1">知识掌握度总览</p>
       </div>
 
-      {/* 统计行 */}
+      {/* 统计行：四列各自的数量 */}
       <div className="grid grid-cols-4 gap-3">
         {COLUMNS.map(col => {
           const count = categorized[col.key].length
@@ -123,6 +127,7 @@ export default function LearningProgress() {
           const items = categorized[col.key]
           return (
             <div key={col.key} className="rounded-xl border border-border bg-card overflow-hidden">
+              {/* 列头 */}
               <div className={`px-4 py-3 border-b border-border ${col.bg}`}>
                 <div className="flex items-center gap-2">
                   <col.icon size={15} className={col.text} />
@@ -133,16 +138,20 @@ export default function LearningProgress() {
                 </div>
               </div>
 
+              {/* 知识点卡片列表 */}
               <div className="p-3 space-y-2 min-h-[250px] max-h-[500px] overflow-y-auto">
                 {items.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">{col.empty}</p>
                 ) : (
                   items.map(kp => {
+                    // 优先使用数据库 estimated_hours，其次用计划中的预估分钟数换算
                     const planItem = planItems.find(p => p.knowledgePointId === kp.id)
                     const hours = kp.estimatedHours || (planItem ? Math.round(planItem.estimatedMinutes / 60 * 10) / 10 : null)
+                    // 已完成 = 0 小时，其他 = 还需学习小时数
                     const remaining = col.key === 'completed' ? 0 : hours
                     return (
                       <div key={kp.id} className={`px-3 py-3 rounded-lg border ${col.border} ${col.bg}`}>
+                        {/* 名称 + 描述 */}
                         <div className="flex items-start gap-2.5">
                           <span className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${col.dot}`} />
                           <div className="min-w-0 flex-1">
@@ -150,6 +159,7 @@ export default function LearningProgress() {
                             <p className="text-xs text-muted-foreground mt-0.5">{kp.description}</p>
                           </div>
                         </div>
+                        {/* 还需学习时间 */}
                         {remaining !== null && remaining !== undefined && (
                           <div className="flex items-center gap-1.5 mt-2 ml-5 px-2 py-1 rounded-md bg-background/40 border border-border/50">
                             <Clock size={12} className={`shrink-0 ${col.text}`} />

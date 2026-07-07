@@ -3,43 +3,57 @@ import { useAuth } from '../store/auth'
 import { generatePlan, getCurrentPlan, type PlanItem } from '../api'
 import { Clock, ChevronRight, ArrowRight, BookOpen, RefreshCw } from 'lucide-react'
 
+/**
+ * 仪表盘首页 - 动态学习计划
+ *
+ * 用户流程：
+ * 1. 进入页面 → 检查是否有本周计划
+ * 2. 无计划 → 弹出时间预算窗口，用户输入每周可用学习时间
+ * 3. 提交预算 → 后端 StudyPlanService 自动生成任务列表
+ * 4. 展示计划 → 按优先级排列的知识点列表，含预估耗时
+ * 5. 可随时点击"重新规划"调整时间预算
+ */
 export default function DashboardHome() {
   const { userId } = useAuth()
 
-  const [showBudget, setShowBudget] = useState(false)
-  const [hours, setHours] = useState(10)
-  const [plan, setPlan] = useState<PlanItem[]>([])
-  const [totalMinutes, setTotalMinutes] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [hasPlan, setHasPlan] = useState(false)
+  const [showBudget, setShowBudget] = useState(false)  // 是否显示预算弹窗
+  const [hours, setHours] = useState(10)                // 用户输入的每周可用小时数
+  const [plan, setPlan] = useState<PlanItem[]>([])      // 当前周计划列表
+  const [totalMinutes, setTotalMinutes] = useState(0)   // 计划总时长（分钟）
+  const [loading, setLoading] = useState(false)          // 生成请求中
+  const [hasPlan, setHasPlan] = useState(false)          // 是否有计划
 
-  // 进入时检查是否有当前计划
+  // 进入页面时检查当前用户是否已有周计划
   useEffect(() => {
     if (!userId) return
     getCurrentPlan(userId)
       .then(res => {
         const d = res.data.data
         if (d.items && d.items.length > 0) {
+          // 已有计划，直接展示
           setPlan(d.items)
           setTotalMinutes(d.totalMinutes)
           setHasPlan(true)
         } else {
+          // 无计划，弹出预算窗口
           setShowBudget(true)
         }
       })
-      .catch(() => setShowBudget(true))
+      .catch(() => setShowBudget(true))  // 请求失败也弹窗
   }, [userId])
 
+  // 生成新的学习计划
   const handleGenerate = async () => {
     if (!userId) return
     setLoading(true)
     try {
+      // 调用后端 API，小时→分钟
       const res = await generatePlan(userId, hours * 60)
       const d = res.data.data
       setPlan(d.items)
       setTotalMinutes(d.totalMinutes)
       setHasPlan(true)
-      setShowBudget(false)
+      setShowBudget(false)  // 关闭预算弹窗
     } catch {
       alert('生成计划失败，请重试')
     } finally {
@@ -47,6 +61,7 @@ export default function DashboardHome() {
     }
   }
 
+  // 任务类型的中文标签和颜色映射
   const reasonLabel: Record<string, string> = {
     '薄弱科目': '重点攻克',
     '前置基础': '前置复习',
@@ -61,7 +76,7 @@ export default function DashboardHome() {
 
   return (
     <div className="space-y-6">
-      {/* 顶栏 */}
+      {/* 顶部标题栏 */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold">本周学习计划</h1>
@@ -77,7 +92,7 @@ export default function DashboardHome() {
         )}
       </div>
 
-      {/* 预算弹窗 */}
+      {/* ===== 时间预算弹窗 ===== */}
       {showBudget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-2xl">
@@ -89,6 +104,7 @@ export default function DashboardHome() {
               <p className="text-xs text-muted-foreground mt-1.5">这周你计划投入多少时间学习？</p>
             </div>
 
+            {/* 小时数输入 */}
             <div className="flex items-center justify-center gap-2 mb-6">
               <input type="number" value={hours}
                 onChange={e => setHours(Math.max(1, Math.min(40, parseInt(e.target.value) || 1)))}
@@ -106,28 +122,27 @@ export default function DashboardHome() {
         </div>
       )}
 
-      {/* 计划时间轴 */}
+      {/* ===== 计划任务列表 ===== */}
       {hasPlan && plan.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-5">
+          {/* 图例 */}
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" /> 前置复习</span>
             <span className="flex items-center gap-1 ml-3"><span className="w-2 h-2 rounded-full bg-red-400" /> 重点攻克</span>
             <span className="flex items-center gap-1 ml-3"><span className="w-2 h-2 rounded-full bg-blue-400" /> 拓展学习</span>
           </div>
 
+          {/* 每项任务卡片 */}
           <div className="space-y-2">
             {plan.map((item, i) => (
               <div key={item.knowledgePointId}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors ${
                   reasonColor[item.reason] || 'border-border'
                 }`}>
-                {/* 序号 */}
                 <span className="text-xs font-mono text-muted-foreground w-5 shrink-0">{i + 1}</span>
-
-                {/* 箭头 */}
                 {i > 0 && <ChevronRight size={12} className="text-muted-foreground shrink-0 -ml-1" />}
 
-                {/* 名称 */}
+                {/* 知识点名称和描述 */}
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium">{item.name}</span>
                   {item.description && (
@@ -135,14 +150,14 @@ export default function DashboardHome() {
                   )}
                 </div>
 
-                {/* 标签 */}
+                {/* 类型标签 */}
                 <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
                   reasonColor[item.reason] || 'border-border text-muted-foreground'
                 }`}>
                   {reasonLabel[item.reason] || item.reason}
                 </span>
 
-                {/* 耗时 */}
+                {/* 预估耗时 */}
                 <span className="text-xs text-muted-foreground shrink-0 w-12 text-right">
                   {Math.round(item.estimatedMinutes / 6) / 10}h
                 </span>
@@ -163,7 +178,7 @@ export default function DashboardHome() {
         </div>
       )}
 
-      {/* 空状态 */}
+      {/* 加载中 */}
       {!hasPlan && !showBudget && (
         <div className="text-center py-12 text-muted-foreground">
           <BookOpen size={32} className="mx-auto mb-3 opacity-30" />
