@@ -1,6 +1,6 @@
 import { Routes, Route, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard, FileQuestion, BarChart3, Settings, LogOut, Zap
+  LayoutDashboard, FileQuestion, BarChart3, TrendingUp, Settings, LogOut, Zap
 } from 'lucide-react'
 import Layout from './components/Layout'
 import Home from './pages/Home'
@@ -10,6 +10,7 @@ import Onboarding from './pages/Onboarding'
 import DashboardHome from './pages/DashboardHome'
 import QuizList from './pages/QuizList'
 import Profile from './pages/Profile'
+import LearningProgress from './pages/LearningProgress'
 import NotFound from './pages/NotFound'
 import { useAuth } from './store/auth'
 
@@ -40,6 +41,8 @@ function DashboardLayout() {
             onClick={() => navigate('/dashboard')} />
           <NavItem icon={<FileQuestion size={18} />} label="错题库" active={isActive('/dashboard/quiz')}
             onClick={() => navigate('/dashboard/quiz')} />
+          <NavItem icon={<TrendingUp size={18} />} label="学习进度" active={isActive('/dashboard/progress')}
+            onClick={() => navigate('/dashboard/progress')} />
           <NavItem icon={<BarChart3 size={18} />} label="能力档案" active={isActive('/dashboard/profile')}
             onClick={() => navigate('/dashboard/profile')} />
         </nav>
@@ -88,6 +91,7 @@ export default function App() {
       <Route path="dashboard" element={<DashboardLayout />}>
         <Route index element={<DashboardHome />} />
         <Route path="quiz" element={<QuizList />} />
+        <Route path="progress" element={<LearningProgress />} />
         <Route path="profile" element={<Profile />} />
       </Route>
 
