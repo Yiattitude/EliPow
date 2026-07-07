@@ -71,9 +71,10 @@ CREATE TABLE `knowledge_point` (
   `id`          BIGINT       PRIMARY KEY AUTO_INCREMENT,
   `name`        VARCHAR(100) NOT NULL,
   `description` TEXT,
-  `parent_id`   BIGINT       COMMENT '父知识点，构建层级',
-  `sort_order`  INT          NOT NULL DEFAULT 0,
-  `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `parent_id`      BIGINT       COMMENT '父知识点，构建层级',
+  `sort_order`     INT          NOT NULL DEFAULT 0,
+  `estimated_hours` DECIMAL(5,1) DEFAULT 0 COMMENT '预估学习时长(小时)',
+  `created_at`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`parent_id`) REFERENCES `knowledge_point`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='知识点';
 
