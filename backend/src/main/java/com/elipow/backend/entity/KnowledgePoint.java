@@ -19,6 +19,8 @@ public class KnowledgePoint {
 
     private Integer sortOrder;  // 排序
 
+    private java.math.BigDecimal estimatedHours; // 预估学习时长(小时)
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt; // 创建时间
 }

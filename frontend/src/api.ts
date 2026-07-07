@@ -25,6 +25,7 @@ export interface KnowledgePoint {
   name: string
   description: string
   parentId: number | null
+  estimatedHours?: number | null
 }
 
 // 认证
@@ -67,6 +68,30 @@ export function saveProfile(id: number, data: {
   grade: string; target: string; abilityLevel: string; weakKnowledge: string[]
 }) {
   return api.put<ApiResult<unknown>>(`/api/users/${id}/profile`, data)
+}
+
+// 周计划
+export interface PlanItem {
+  knowledgePointId: number
+  name: string
+  description: string
+  estimatedMinutes: number
+  reason: string
+  status: string
+}
+
+export interface PlanResult {
+  items: PlanItem[]
+  totalMinutes: number
+  timeBudget?: number
+}
+
+export function generatePlan(userId: number, timeBudget: number) {
+  return api.post<ApiResult<PlanResult>>(`/api/study-plan/generate?userId=${userId}&timeBudget=${timeBudget}`)
+}
+
+export function getCurrentPlan(userId: number) {
+  return api.get<ApiResult<PlanResult>>(`/api/study-plan/current?userId=${userId}`)
 }
 
 export default api

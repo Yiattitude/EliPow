@@ -2,6 +2,7 @@ package com.elipow.backend.controller;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.sql.DataSource;
@@ -68,6 +69,36 @@ public class DbTestController {
             result.put("status", "ok");
             result.put("deletedUsers", deleted);
             result.put("message", "已清空所有用户数据，保留知识库和资源");
+        } catch (Exception e) {
+            result.put("status", "error");
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    @PostMapping("/api/admin/migrate-estimated-hours")
+    public Map<String, Object> migrateEstimatedHours() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try (var conn = dataSource.getConnection()) {
+            var stmt = conn.createStatement();
+
+            // 添加 estimated_hours 列（如果不存在）
+            try {
+                stmt.executeUpdate(
+                    "ALTER TABLE `knowledge_point` ADD COLUMN `estimated_hours` DECIMAL(5,1) " +
+                    "DEFAULT NULL COMMENT '预估学习时长(小时)' AFTER `sort_order`"
+                );
+            } catch (Exception ignored) { }
+
+            // 按层级设置默认值：一级3h, 二级1.5h, 三级0.5h
+            stmt.executeUpdate("UPDATE `knowledge_point` SET estimated_hours = 3.0 WHERE parent_id IS NULL");
+            // 三级：叶子节点（自己被其他节点引用，但自己不是顶级）
+            stmt.executeUpdate("UPDATE `knowledge_point` SET estimated_hours = 0.5 WHERE parent_id IS NOT NULL AND id NOT IN (SELECT p FROM (SELECT DISTINCT parent_id AS p FROM knowledge_point WHERE parent_id IS NOT NULL) t)");
+            // 二级：非顶级非叶子
+            stmt.executeUpdate("UPDATE `knowledge_point` SET estimated_hours = 1.5 WHERE estimated_hours IS NULL");
+
+            result.put("status", "ok");
+            result.put("message", "已设置 estimated_hours 默认值");
         } catch (Exception e) {
             result.put("status", "error");
             result.put("error", e.getMessage());

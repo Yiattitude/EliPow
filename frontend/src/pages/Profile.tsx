@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../store/auth'
 import { getUser, getKnowledgePoints } from '../api'
 import type { UserInfo, KnowledgePoint } from '../api'
-import { GraduationCap, Target, TrendingUp, AlertTriangle, ShieldCheck } from 'lucide-react'
+import { ShieldCheck, BookOpen, AlertTriangle, Clock, Target, GraduationCap, TrendingUp } from 'lucide-react'
 
 const LEVEL_LABELS: Record<string, string> = {
-  'BEGINNER': '入门',
-  'INTERMEDIATE': '进阶',
-  'ADVANCED': '高级'
+  'BEGINNER': '入门', 'INTERMEDIATE': '进阶', 'ADVANCED': '高级'
 }
+
+// 已从数据库 estimated_hours 字段获取，见 KnowledgePoint.estimatedHours
 
 export default function Profile() {
   const { userId } = useAuth()
@@ -18,122 +18,145 @@ export default function Profile() {
 
   useEffect(() => {
     if (!userId) return
-    Promise.all([
-      getUser(userId),
-      getKnowledgePoints()
-    ]).then(([userRes, kpRes]) => {
-      setUser(userRes.data.data)
-      setAllPoints(kpRes.data.data.filter(k => k.parentId === null))
-    }).catch(() => {}).finally(() => setLoading(false))
+    Promise.all([getUser(userId), getKnowledgePoints()])
+      .then(([userRes, kpRes]) => {
+        setUser(userRes.data.data)
+        setAllPoints(kpRes.data.data.filter(k => k.parentId === null))
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [userId])
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4 animate-pulse">
+      <div className="max-w-4xl mx-auto space-y-4 animate-pulse">
         <div className="h-6 w-32 bg-secondary rounded" />
-        <div className="h-40 bg-card border border-border rounded-xl" />
-        <div className="h-40 bg-card border border-border rounded-xl" />
+        <div className="h-48 bg-card border border-border rounded-xl" />
       </div>
     )
   }
-
   if (!user) return null
 
-  const profile = user.profile
-  const weakNames: string[] = profile?.weakKnowledge
-    ? (() => { try { return JSON.parse(profile.weakKnowledge) } catch { return [] } })()
+  // 解析薄弱科目
+  const weakNames: string[] = user.profile?.weakKnowledge
+    ? (() => { try { return JSON.parse(user.profile.weakKnowledge) } catch { return [] } })()
     : []
 
-  const mastered = allPoints.filter(k => !weakNames.includes(k.name))
+  // 找薄弱科目的前置（父节点）
+  const parentNames = allPoints
+    .filter(k => weakNames.includes(k.name))
+    .map(k => k.name)
+
+  // 归类
+  const mastered = allPoints.filter(k => !weakNames.includes(k.name) && !parentNames.includes(k.name))
+  const learning = allPoints.filter(k => parentNames.includes(k.name) && !weakNames.includes(k.name))
   const weak = allPoints.filter(k => weakNames.includes(k.name))
 
-  return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold">能力档案</h1>
-        <p className="text-sm text-muted-foreground mt-1">你的学习画像与知识掌握概览</p>
-      </div>
+  const columns = [
+    { key: 'mastered', title: '已掌握', icon: ShieldCheck, color: 'green',
+      items: mastered, border: 'border-green-500/30', bg: 'bg-green-950/10', text: 'text-green-400', dot: 'bg-green-400' },
+    { key: 'learning', title: '学习中', icon: BookOpen, color: 'amber',
+      items: learning, border: 'border-amber-500/30', bg: 'bg-amber-950/10', text: 'text-amber-400', dot: 'bg-amber-400' },
+    { key: 'weak', title: '待提升', icon: AlertTriangle, color: 'red',
+      items: weak, border: 'border-red-500/30', bg: 'bg-red-950/10', text: 'text-red-400', dot: 'bg-red-400' },
+  ]
 
-      {/* 基本信息卡片 */}
+  const total = allPoints.length
+  const masteredCount = mastered.length
+  const weakCount = weak.length
+  const learningCount = learning.length
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-6">
+      {/* 用户画像摘要 */}
       <div className="rounded-xl border border-border bg-card p-5">
-        <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
-          <GraduationCap size={15} className="text-primary" /> 基本信息
-        </h2>
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { icon: GraduationCap, label: '年级', value: profile?.grade || '未设置' },
-            { icon: Target, label: '目标', value: profile?.target || '未设置' },
-            { icon: TrendingUp, label: '水平', value: profile?.abilityLevel ? LEVEL_LABELS[profile.abilityLevel] : '未设置' },
-          ].map((item, i) => (
-            <div key={i} className="rounded-lg bg-secondary/50 border border-border p-3 text-center">
-              <item.icon size={14} className="text-muted-foreground mx-auto mb-1.5" />
-              <div className="text-xs text-muted-foreground">{item.label}</div>
-              <div className="text-sm font-semibold mt-0.5">{item.value}</div>
-            </div>
-          ))}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 text-sm">
+            <GraduationCap size={14} className="text-muted-foreground" />
+            <span className="text-muted-foreground">年级</span>
+            <span className="font-medium">{user.profile?.grade || '-'}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <Target size={14} className="text-muted-foreground" />
+            <span className="text-muted-foreground">目标</span>
+            <span className="font-medium">{user.profile?.target || '-'}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <TrendingUp size={14} className="text-muted-foreground" />
+            <span className="text-muted-foreground">水平</span>
+            <span className="font-medium">{user.profile?.abilityLevel ? LEVEL_LABELS[user.profile.abilityLevel] : '-'}</span>
+          </div>
+        </div>
+        {/* 概览条 */}
+        <div className="mt-4 pt-3 border-t border-border flex items-center gap-4 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-green-400" /> 已掌握 {masteredCount}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-amber-400" /> 学习中 {learningCount}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-red-400" /> 待提升 {weakCount}
+          </span>
+          <span className="ml-auto">
+            整体掌握度 {total > 0 ? Math.round((masteredCount / total) * 100) : 0}%
+          </span>
+        </div>
+        {/* 进度条 */}
+        <div className="mt-2 h-1.5 rounded-full bg-secondary overflow-hidden flex">
+          <div className="h-full bg-green-400 transition-all" style={{ width: `${(masteredCount / total) * 100}%` }} />
+          <div className="h-full bg-amber-400 transition-all" style={{ width: `${(learningCount / total) * 100}%` }} />
+          <div className="h-full bg-red-400 transition-all" style={{ width: `${(weakCount / total) * 100}%` }} />
         </div>
       </div>
 
-      {/* 已掌握 */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
-          <ShieldCheck size={15} className="text-green-400" /> 已掌握领域
-        </h2>
-        {mastered.length > 0 ? (
-          <div className="space-y-2">
-            {mastered.map(k => (
-              <div key={k.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-green-950/10 border border-green-800/20">
-                <div className="w-2 h-2 rounded-full bg-green-400" />
-                <span className="text-sm text-green-300/80">{k.name}</span>
-                <span className="text-xs text-muted-foreground ml-auto">{k.description}</span>
+      {/* 看板三列 */}
+      <div className="grid grid-cols-3 gap-4">
+        {columns.map(col => (
+          <div key={col.key} className="rounded-xl border border-border bg-card overflow-hidden">
+            {/* 列头 */}
+            <div className={`px-4 py-3 border-b border-border ${col.bg}`}>
+              <div className="flex items-center gap-2">
+                <col.icon size={15} className={col.text} />
+                <h3 className="text-sm font-semibold">{col.title}</h3>
+                <span className={`ml-auto text-xs px-1.5 py-0.5 rounded-full border ${col.border} ${col.text}`}>
+                  {col.items.length}
+                </span>
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">完成画像后可查看已掌握的知识领域</p>
-        )}
-      </div>
+            </div>
 
-      {/* 薄弱项 */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
-          <AlertTriangle size={15} className="text-amber-400" /> 待提升领域
-        </h2>
-        {weak.length > 0 ? (
-          <div className="space-y-2">
-            {weak.map(k => (
-              <div key={k.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-amber-950/10 border border-amber-800/20">
-                <div className="w-2 h-2 rounded-full bg-amber-400" />
-                <span className="text-sm text-amber-300/80">{k.name}</span>
-                <span className="text-xs text-muted-foreground ml-auto">{k.description}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">太棒了，没有标记薄弱项！可以在设置中更新</p>
-        )}
-
-        {weak.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-border">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">整体掌握度</span>
-              <span className="font-medium text-foreground">
-                {allPoints.length > 0 ? Math.round((mastered.length / allPoints.length) * 100) : 0}%
-              </span>
-            </div>
-            <div className="mt-2 h-1.5 rounded-full bg-secondary overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-amber-400 to-green-400 transition-all duration-700"
-                style={{ width: `${allPoints.length > 0 ? Math.round((mastered.length / allPoints.length) * 100) : 0}%` }}
-              />
-            </div>
-            <div className="flex justify-between mt-1 text-[10px] text-muted-foreground">
-              <span>0%</span>
-              <span>掌握 {mastered.length}/{allPoints.length} 门核心课程</span>
-              <span>100%</span>
+            {/* 卡片列表 */}
+            <div className="p-3 space-y-2 min-h-[200px]">
+              {col.items.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-6">
+                  {col.key === 'mastered' ? '标记薄弱科目后可看到已掌握的知识' :
+                   col.key === 'learning' ? '暂无进行中的学习' : '太棒了，没有待提升项'}
+                </p>
+              ) : (
+                col.items.map(kp => (
+                  <div key={kp.id}
+                    className={`px-3 py-2.5 rounded-lg border ${col.border} ${col.bg} transition-colors`}>
+                    <div className="flex items-start gap-2.5">
+                      <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${col.dot}`} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{kp.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{kp.description}</p>
+                      </div>
+                    </div>
+                    {kp.estimatedHours && (
+                      <div className="flex items-center gap-1 mt-1.5 ml-5">
+                        <Clock size={10} className="text-muted-foreground" />
+                        <span className="text-[10px] text-muted-foreground">
+                          约需 {kp.estimatedHours} 小时
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
-        )}
+        ))}
       </div>
     </div>
   )
