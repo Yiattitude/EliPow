@@ -30,9 +30,14 @@
   * {
     @apply border-border;
   }
+  html {
+    font-size: 19px;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Geist', 'Inter', system-ui, sans-serif;
+    line-height: 1.6;
     background-image: radial-gradient(circle at 50% 0%, rgba(170, 59, 255, 0.05), transparent 40%),
                       radial-gradient(circle at 80% 100%, rgba(59, 130, 246, 0.05), transparent 40%);
     background-attachment: fixed;

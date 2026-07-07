@@ -35,6 +35,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiResult<Void> handleUnknown(Exception e) {
-        return ApiResult.error(5000, "服务异常");
+        e.printStackTrace();
+        return ApiResult.error(5000, e.getClass().getSimpleName() + ": " + e.getMessage());
     }
 }
