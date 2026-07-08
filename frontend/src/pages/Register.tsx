@@ -33,8 +33,9 @@ export default function Register() {
       const d = res.data.data
       setAuth(d.token, d.id, d.email, d.nickname, d.hasProfile)
       navigate('/onboarding')
-    } catch {
-      setApiError('注册失败，邮箱可能已被使用')
+    } catch (e) {
+      const msg = (e as any)?.response?.data?.message || '注册失败，请检查网络或联系管理员'
+      setApiError(msg)
     }
   }
 
